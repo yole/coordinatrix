@@ -13,10 +13,12 @@ import com.intellij.ui.layout.panel
 import java.awt.BorderLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.JTextField
 
 class CdxEditBuildDialog(project: Project, private val build: CoordinatedBuild) : DialogWrapper(project) {
     private val projectPathCombo = ComboBox<String>().apply { isEditable = true }
     private val projectPathField = ComboboxWithBrowseButton(projectPathCombo)
+    private val artifactNamesField = JTextField()
 
     init {
         init()
@@ -25,6 +27,8 @@ class CdxEditBuildDialog(project: Project, private val build: CoordinatedBuild) 
             .filter { it != project }
             .mapNotNull { it.basePath }
         projectPathCombo.model = CollectionComboBoxModel(otherProjectPaths, build.projectPath)
+        projectPathCombo.editor.item = build.projectPath
+        artifactNamesField.text = build.artifactNames
     }
 
     override fun createCenterPanel(): JComponent? {
@@ -32,11 +36,15 @@ class CdxEditBuildDialog(project: Project, private val build: CoordinatedBuild) 
             row("Path:") {
                 projectPathField()
             }
+            row("Artifacts to build:") {
+                artifactNamesField()
+            }
         }
     }
 
     override fun doOKAction() {
         build.projectPath = projectPathField.comboBox.editor.item.toString()
+        build.artifactNames = artifactNamesField.text
         super.doOKAction()
     }
 }
@@ -53,6 +61,13 @@ class CdxConfigurationPanel(private val project: Project) : JPanel(BorderLayout(
             dialog.show()
             if (dialog.isOK) {
                 buildListModel.add(build)
+            }
+        }
+        decorator.setEditAction {
+            buildList.selectedValue?.let { selectedBuild ->
+                val dialog = CdxEditBuildDialog(project, selectedBuild)
+                dialog.show()
+                buildListModel.contentsChanged(selectedBuild)
             }
         }
         add(decorator.createPanel(), BorderLayout.CENTER)

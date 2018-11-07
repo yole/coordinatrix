@@ -9,7 +9,13 @@ class CoordinatedBuild : BaseState() {
     @get:Attribute
     var projectPath by string()
 
+    @get:Attribute
+    var artifactNames by string()
+
     override fun toString(): String {
+        if (!artifactNames.isNullOrEmpty()) {
+            return "Build artifacts $artifactNames in project $projectPath"
+        }
         return "Build project $projectPath"
     }
 }

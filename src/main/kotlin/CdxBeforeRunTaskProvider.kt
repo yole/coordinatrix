@@ -8,9 +8,13 @@ import com.intellij.notification.NotificationGroup
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.application.TransactionGuard
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Key
+import com.intellij.packaging.artifacts.ArtifactManager
+import com.intellij.task.ProjectTask
 import com.intellij.task.ProjectTaskManager
+import com.intellij.task.ProjectTaskNotification
 import com.intellij.util.concurrency.Semaphore
 import org.jetbrains.concurrency.Promise
 
@@ -41,32 +45,58 @@ class CdxBeforeRunTaskProvider : BeforeRunTaskProvider<CdxBeforeRunTask>() {
                     NotificationType.ERROR, null).notify(configuration.project)
                 return false
             }
-            val done = Semaphore()
-            done.down()
-            val projectTaskManager = ProjectTaskManager.getInstance(project)
-            var result = false
-            TransactionGuard.submitTransaction(project, Runnable {
-                if (!configuration.project.isDisposed) {
-                    projectTaskManager.buildAllModules { projectTaskResult ->
-                        if (projectTaskResult.errors == 0 && !projectTaskResult.isAborted) {
-                            result = true
-                        }
-                        done.up()
-                    }
-                }
-                else {
-                    done.up()
-                }
-            })
-            done.waitFor()
-            if (!result) {
-                Notification(notificationGroup.displayId, "Coordinated Build", "Build failed for ${build.projectPath}",
-                    NotificationType.ERROR, null).notify(configuration.project)
-                return false
-            }
+            if (!executeBuildTask(project, configuration.project, build)) return false
         }
 
         return true
+    }
+
+    private fun executeBuildTask(
+        targetProject: Project,
+        currentProject: Project,
+        build: CoordinatedBuild
+    ): Boolean {
+        val done = Semaphore()
+        done.down()
+        val projectTaskManager = ProjectTaskManager.getInstance(targetProject)
+        var result = false
+        TransactionGuard.submitTransaction(targetProject, Runnable {
+            if (!currentProject.isDisposed) {
+                val task = createBuildTask(targetProject, projectTaskManager, build)
+                projectTaskManager.run(task, ProjectTaskNotification { projectTaskResult ->
+                    if (projectTaskResult.errors == 0 && !projectTaskResult.isAborted) {
+                        result = true
+                    }
+                    done.up()
+                })
+            } else {
+                done.up()
+            }
+        })
+        done.waitFor()
+
+        if (!result) {
+            Notification(
+                notificationGroup.displayId, "Coordinated Build", "Build failed for ${build.projectPath}",
+                NotificationType.ERROR, null
+            ).notify(targetProject)
+            return false
+        }
+        return true
+    }
+
+    private fun createBuildTask(
+        project: Project,
+        projectTaskManager: ProjectTaskManager,
+        build: CoordinatedBuild
+    ): ProjectTask {
+        if (build.artifactNames.isNullOrEmpty()) {
+            return projectTaskManager.createAllModulesBuildTask(true, project)
+        }
+        val artifacts = build.artifactNames!!.split(",").mapNotNull {
+            ArtifactManager.getInstance(project).findArtifact(it)
+        }
+        return projectTaskManager.createBuildTask(true, *artifacts.toTypedArray())
     }
 
     companion object {
