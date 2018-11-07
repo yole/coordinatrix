@@ -1,15 +1,17 @@
 package ru.yole.coordinatrix
 
 import com.intellij.openapi.components.*
+import com.intellij.openapi.project.Project
 import com.intellij.util.xml.Attribute
 import com.intellij.util.xmlb.XmlSerializerUtil
 
 class CoordinatedBuild : BaseState() {
     @get:Attribute
-    var id by string()
-
-    @get:Attribute
     var projectPath by string()
+
+    override fun toString(): String {
+        return "Build project $projectPath"
+    }
 }
 
 @State(name = "CoordinatedBuildModel", storages = [Storage(StoragePathMacros.WORKSPACE_FILE)])
@@ -22,5 +24,9 @@ class CoordinatedBuildModel : PersistentStateComponent<CoordinatedBuildModel> {
 
     override fun loadState(state: CoordinatedBuildModel) {
         XmlSerializerUtil.copyBean(state, this)
+    }
+
+    companion object {
+        fun getInstance(project: Project) = ServiceManager.getService(project, CoordinatedBuildModel::class.java)
     }
 }
