@@ -3,16 +3,14 @@
     <name>Coordinatrix</name>
     <vendor email="yole@jetbrains.com">Dmitry Jemerov</vendor>
 
-    <description><![CDATA[
-    Enter short description for your plugin here.<br>
-    <em>most HTML tags may be used</em>
-    ]]></description>
+    <description>Supports coordinated build and debug between multiple IDE windows or instances</description>
 
     <depends>com.intellij.modules.lang</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <projectService serviceImplementation="ru.yole.coordinatrix.CoordinatedBuildModel"/>
         <stepsBeforeRunProvider implementation="ru.yole.coordinatrix.CdxBeforeRunTaskProvider"/>
+        <consoleFilterProvider implementation="ru.yole.coordinatrix.CdxConsoleFilterProvider"/>
     </extensions>
 
     <actions>
