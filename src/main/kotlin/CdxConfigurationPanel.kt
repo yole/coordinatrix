@@ -72,6 +72,10 @@ class CdxConfigurationPanel(private val project: Project) : JPanel(BorderLayout(
         }
         add(decorator.createPanel(), BorderLayout.CENTER)
     }
+
+    fun saveChanges() {
+        CoordinatedBuildModel.getInstance(project).builds = buildListModel.items
+    }
 }
 
 class CdxConfigurationDialog(project: Project) : DialogWrapper(project) {
@@ -84,5 +88,10 @@ class CdxConfigurationDialog(project: Project) : DialogWrapper(project) {
 
     override fun createCenterPanel(): JComponent? {
         return panel
+    }
+
+    override fun doOKAction() {
+        panel.saveChanges()
+        super.doOKAction()
     }
 }
