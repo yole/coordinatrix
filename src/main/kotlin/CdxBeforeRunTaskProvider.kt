@@ -3,6 +3,7 @@ package ru.yole.coordinatrix
 import com.intellij.execution.BeforeRunTaskProvider
 import com.intellij.execution.configurations.RunConfiguration
 import com.intellij.execution.runners.ExecutionEnvironment
+import com.intellij.execution.ui.RunContentManager
 import com.intellij.notification.Notification
 import com.intellij.notification.NotificationGroup
 import com.intellij.notification.NotificationType
@@ -61,7 +62,10 @@ class CdxBeforeRunTaskProvider : BeforeRunTaskProvider<CdxBeforeRunTask>() {
         val projectTaskManager = ProjectTaskManager.getInstance(targetProject)
         var result = false
         TransactionGuard.submitTransaction(targetProject, Runnable {
-            if (!currentProject.isDisposed) {
+            if (!targetProject.isDisposed && !currentProject.isDisposed) {
+                // Ensure that toolwindows are initialized so we can initiate remote debug when needed
+                RunContentManager.getInstance(targetProject)
+
                 val task = createBuildTask(targetProject, projectTaskManager, build)
                 projectTaskManager.run(task, ProjectTaskNotification { projectTaskResult ->
                     if (projectTaskResult.errors == 0 && !projectTaskResult.isAborted) {
